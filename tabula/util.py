@@ -22,20 +22,7 @@ def java_version() -> str:
     Returns:
         str: Result of ``java -version``
     """
-    import subprocess
-
-    try:
-        res = subprocess.check_output(
-            ["java", "-version"], stderr=subprocess.STDOUT
-        ).decode()
-
-    except FileNotFoundError:
-        res = (
-            "`java -version` faild. `java` command is not found from this Python"
-            "process. Please ensure Java is installed and PATH is set for `java`"
-        )
-
-    return res
+    pass
 
 
 def environment_info() -> None:
@@ -46,25 +33,7 @@ def environment_info() -> None:
             Detailed information like Python version, Java version,
             or OS environment, etc.
     """
-
-    import sys
-
-    import distro
-
-    from tabula import __version__
-
-    print(
-        f"""Python version:
-    {sys.version}
-Java version:
-    {java_version().strip()}
-tabula-py version: {__version__}
-platform: {platform.platform()}
-uname:
-    {str(platform.uname())}
-linux_distribution: ('{distro.name()}', '{distro.version()}', '{distro.codename()}')
-mac_ver: {platform.mac_ver()}"""
-    )
+    pass
 
 
 @dataclass
@@ -160,119 +129,16 @@ class TabulaOption:
         """Merge two TabulaOption.
         self will overwrite other fields' values.
         """
-        return TabulaOption(
-            pages=self.pages or other.pages,
-            guess=self.guess or other.guess,
-            area=self.area or other.area,
-            relative_area=self.relative_area or other.relative_area,
-            lattice=self.lattice or other.lattice,
-            stream=self.stream or other.stream,
-            password=self.password or other.password,
-            silent=self.silent or other.silent,
-            columns=self.columns or other.columns,
-            relative_columns=self.relative_columns or other.relative_columns,
-            format=self.format or other.format,
-            batch=self.batch or other.batch,
-            output_path=self.output_path or other.output_path,
-            options=self.options or other.options,
-            multiple_tables=self.multiple_tables or other.multiple_tables,
-        )
+        pass
 
     def build_option_list(self) -> List[str]:
         """Convert to tabula-java option list"""
-        __options = []
-        # handle options described in string for backward compatibility
-        if self.options:
-            __options += shlex.split(self.options)
-
-        if self.pages:
-            __pages = self.pages
-            if isinstance(self.pages, int):
-                __pages = str(self.pages)
-            elif type(self.pages) in [list, tuple]:
-                __pages = ",".join(map(str, self.pages))
-
-            __pages = cast(str, __pages)
-            __options += ["--pages", __pages]
-        else:
-            logger.warning(
-                "'pages' argument isn't specified."
-                "Will extract only from page 1 by default."
-            )
-
-        multiple_areas = False
-
-        if self.area:
-            self.guess = False
-            if type(self.area) in [list, tuple]:
-                # Check if nested list or tuple for multiple areas
-                if any(type(e) in [list, tuple] for e in self.area):
-                    for e in self.area:
-                        e = cast(Iterable[float], e)
-                        _validate_area(e)
-                        __area = _format_with_relative(e, self.relative_area)
-                        __options += ["--area", __area]
-                        multiple_areas = True
-
-                else:
-                    area = cast(Iterable[float], self.area)
-                    _validate_area(area)
-                    __area = _format_with_relative(area, self.relative_area)
-                    __options += ["--area", __area]
-
-        if self.lattice:
-            __options.append("--lattice")
-
-        if self.stream:
-            __options.append("--stream")
-
-        if self.guess and not multiple_areas:
-            __options.append("--guess")
-
-        if self.format:
-            __options += ["--format", self.format]
-
-        if self.output_path:
-            __options += ["--outfile", self.output_path]
-
-        if self.columns:
-            if list(self.columns) != sorted(self.columns):
-                raise ValueError("columns option should be sorted")
-
-            __columns = _format_with_relative(self.columns, self.relative_columns)
-            __options += ["--columns", __columns]
-
-        if self.password:
-            __options += ["--password", self.password]
-
-        if self.batch:
-            __options += ["--batch", self.batch]
-
-        if self.silent:
-            __options.append("--silent")
-
-        return __options
+        pass
 
 
 def _format_with_relative(values: Iterable[float], is_relative: bool) -> str:
-    percent = "%" if is_relative else ""
-    value_str = ",".join(map(str, values))
-
-    return f"{percent}{value_str}"
+    pass
 
 
 def _validate_area(values: Iterable[float]) -> None:
-    value_length = len(list(values))
-    if value_length != 4:
-        raise ValueError(
-            f"area should have 4 values for each option but {values} has {value_length}"
-        )
-    top, left, bottom, right = values
-    if top >= bottom:
-        raise ValueError(
-            f"area option bottom={bottom} should be greater than top={top}"
-        )
-    if left >= right:
-        raise ValueError(
-            f"area option right={right} should be greater than left={left}"
-        )
+    pass

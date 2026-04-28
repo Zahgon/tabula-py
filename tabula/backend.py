@@ -19,7 +19,7 @@ DEFAULT_CONFIG = {"JAR_PATH": os.path.join(JAR_DIR, JAR_NAME)}
 
 
 def jar_path() -> str:
-    return os.environ.get("TABULA_JAR", DEFAULT_CONFIG["JAR_PATH"])
+    pass
 
 
 class TabulaVm:
@@ -64,14 +64,7 @@ class TabulaVm:
     def call_tabula_java(
         self, options: TabulaOption, path: Optional[str] = None
     ) -> str:
-        sb = self.lang.StringBuilder()
-        args = options.build_option_list()
-        if path:
-            args.insert(0, path)
-
-        cmd = self.parser.parse(self.tabula.CommandLineApp.buildOptions(), args)
-        self.tabula.CommandLineApp(sb, cmd).extractTables(cmd)
-        return str(sb.toString())
+        pass
 
 
 class SubprocessTabula:
@@ -95,42 +88,9 @@ class SubprocessTabula:
     def update_encoding(
         self, encoding: str, java_options: List[str], silent: Optional[bool]
     ) -> None:
-        self.encoding = encoding
-        self.java_options = java_options
-        if silent:
-            self.java_options.extend(
-                (
-                    "-Dorg.slf4j.simpleLogger.defaultLogLevel=off",
-                    "-Dorg.apache.commons.logging.Log"
-                    "=org.apache.commons.logging.impl.NoOpLog",
-                )
-            )
+        pass
 
     def call_tabula_java(
         self, options: TabulaOption, path: Optional[str] = None
     ) -> str:
-        args = (
-            ["java"]
-            + self.java_options
-            + ["-jar", jar_path()]
-            + options.build_option_list()
-        )
-        if path:
-            args.append(path)
-
-        try:
-            result = subprocess.run(
-                args,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                stdin=subprocess.DEVNULL,
-                check=True,
-            )
-            if result.stderr:
-                logger.warning(f"Got stderr: {result.stderr.decode(self.encoding)}")
-            return result.stdout.decode(self.encoding)
-        except FileNotFoundError:
-            raise JavaNotFoundError(JAVA_NOT_FOUND_ERROR)
-        except subprocess.CalledProcessError as e:
-            logger.error(f"Error from tabula-java:\n{e.stderr.decode(self.encoding)}\n")
-            raise
+        pass

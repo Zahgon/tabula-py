@@ -54,36 +54,7 @@ def _run(
     options, as well as an optional path to pass to tabula-java as a regular
     argument to use for any required output sent to stderr.
     """
-    # Ignore some options that are set by tabula-py
-    IGNORED_JAVA_OPTIONS = {
-        "-Djava.awt.headless=true",
-        "-Dfile.encoding=UTF8",
-        "-Dorg.slf4j.simpleLogger.defaultLogLevel=off",
-        "-Dorg.apache.commons.logging.Log=org.apache.commons.logging.impl.NoOpLog",
-    }
-
-    java_options = _build_java_options(java_options, encoding)
-
-    global _tabula_vm
-    if force_subprocess:
-        _tabula_vm = SubprocessTabula(
-            java_options=java_options, silent=options.silent, encoding=encoding
-        )
-
-    if not _tabula_vm:
-        _tabula_vm = TabulaVm(java_options=java_options, silent=options.silent)
-        if _tabula_vm and not _tabula_vm.tabula:
-            _tabula_vm = SubprocessTabula(
-                java_options=java_options, silent=options.silent, encoding=encoding
-            )
-    elif isinstance(_tabula_vm, SubprocessTabula):
-        _tabula_vm.update_encoding(
-            encoding=encoding, java_options=java_options, silent=options.silent
-        )
-    elif set(java_options) - IGNORED_JAVA_OPTIONS:
-        logger.warning("java_options is ignored until rebooting the Python process.")
-
-    return _tabula_vm.call_tabula_java(options, path)
+    pass
 
 
 def read_pdf(
@@ -354,89 +325,7 @@ def read_pdf(
         13    VC
         14    VC]
     """  # noqa
-
-    format = None
-    if output_format:
-        # Respects explicit output_format
-        multiple_tables = False
-
-        if output_format.lower() == "dataframe":
-            pass
-        elif output_format.lower() == "json":
-            format = "JSON"
-        else:
-            raise ValueError(f"Unknown {output_format=}")
-
-    if multiple_tables:
-        format = "JSON"
-
-    tabula_options = TabulaOption(
-        pages=pages,
-        guess=guess,
-        area=area,
-        relative_area=relative_area,
-        lattice=lattice,
-        stream=stream,
-        password=password,
-        silent=silent,
-        columns=columns,
-        relative_columns=relative_columns,
-        format=format,
-        batch=batch,
-        output_path=output_path,
-        options=options,
-        multiple_tables=multiple_tables,
-    )
-
-    path, temporary = localize_file(input_path, user_agent, use_raw_url=use_raw_url)
-
-    if not os.path.exists(path):
-        raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), path)
-
-    if os.path.getsize(path) == 0:
-        raise ValueError(f"{path} is empty. Check the file, or download it manually.")
-
-    try:
-        output = _run(
-            tabula_options,
-            java_options,
-            path,
-            encoding=encoding,
-            force_subprocess=force_subprocess,
-        )
-    finally:
-        if temporary:
-            os.unlink(path)
-
-    if len(output) == 0:
-        logger.warning("The output file is empty.")
-        return []
-
-    if pandas_options is None:
-        pandas_options = {}
-
-    _pandas_options = deepcopy(pandas_options)
-    fmt = tabula_options.format
-    if fmt == "JSON":
-        raw_json: List[Any] = json.loads(output)
-        if multiple_tables:
-            return _extract_from(raw_json, _pandas_options)
-        else:
-            return raw_json
-
-    else:
-        _pandas_options["encoding"] = _pandas_options.get("encoding", encoding)
-
-        try:
-            return [pd.read_csv(io.StringIO(output), **_pandas_options)]
-        except pd.errors.ParserError as e:
-            message = "Error failed to create DataFrame with different column tables.\n"
-            message += (
-                "Try to set `multiple_tables=True`"
-                "or set `names` option for `pandas_options`. \n"
-            )
-
-            raise CSVParseError(message, e)
+    pass
 
 
 def read_pdf_with_template(
@@ -644,49 +533,7 @@ def read_pdf_with_template(
         12        15.2   VC   1.0
         13        17.3   VC   1.0]
     """  # noqa
-
-    path, temporary = localize_file(
-        template_path, user_agent=user_agent, suffix=".json", use_raw_url=use_raw_url
-    )
-    _options = load_template(path)
-    _force_option = TabulaOption(
-        pages=pages,
-        guess=guess,
-        area=area,
-        relative_area=relative_area,
-        lattice=lattice,
-        stream=stream,
-        password=password,
-        silent=silent,
-        columns=columns,
-        relative_columns=relative_columns,
-        format=format,
-        batch=batch,
-        output_path=output_path,
-        options=options,
-    )
-    dataframes = []
-
-    try:
-        for option in _options:
-            _df = read_pdf(
-                input_path,
-                pandas_options=pandas_options,
-                encoding=encoding,
-                java_options=java_options,
-                force_subprocess=force_subprocess,
-                **asdict(_force_option.merge(option)),
-            )
-
-            if isinstance(_df, list):
-                dataframes.extend(_df)
-            else:
-                dataframes.append(_df)
-    finally:
-        if temporary:
-            os.unlink(path)
-
-    return dataframes
+    pass
 
 
 def convert_into(
@@ -800,42 +647,7 @@ def convert_into(
         subprocess.CalledProcessError:
             If tabula-java execution failed.
     """
-
-    if output_path is None or len(output_path) == 0:
-        raise ValueError("'output_path' shoud not be None or empty")
-
-    format = _extract_format_for_conversion(output_format)
-
-    tabula_options = TabulaOption(
-        pages=pages,
-        guess=guess,
-        area=area,
-        relative_area=relative_area,
-        lattice=lattice,
-        stream=stream,
-        password=password,
-        silent=silent,
-        columns=columns,
-        relative_columns=relative_columns,
-        format=format,
-        batch=batch,
-        output_path=output_path,
-        options=options,
-    )
-
-    path, temporary = localize_file(input_path)
-
-    if not os.path.exists(path):
-        raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), path)
-
-    if os.path.getsize(path) == 0:
-        raise ValueError(f"{path} is empty. Check the file, or download it manually.")
-
-    try:
-        _run(tabula_options, java_options, path, force_subprocess=force_subprocess)
-    finally:
-        if temporary:
-            os.unlink(path)
+    pass
 
 
 def convert_into_by_batch(
@@ -937,62 +749,17 @@ def convert_into_by_batch(
         ValueError:
             If input_dir doesn't exist.
     """
-
-    if input_dir is None or not os.path.isdir(input_dir):
-        raise ValueError("'input_dir' should be an existing directory path")
-
-    format = _extract_format_for_conversion(output_format)
-
-    tabula_options = TabulaOption(
-        pages=pages,
-        guess=guess,
-        area=area,
-        relative_area=relative_area,
-        lattice=lattice,
-        stream=stream,
-        password=password,
-        silent=silent,
-        columns=columns,
-        relative_columns=relative_columns,
-        format=format,
-        batch=input_dir,
-        output_path=output_path,
-        options=options,
-    )
-
-    _run(tabula_options, java_options, force_subprocess=force_subprocess)
+    pass
 
 
 def _build_java_options(
     _java_options: Optional[List[str]] = None, encoding: str = "utf-8"
 ) -> List[str]:
-    if _java_options is None:
-        _java_options = []
-    elif isinstance(_java_options, str):
-        _java_options = shlex.split(_java_options)
-
-    # to prevent tabula-py from stealing focus on every call on mac
-    if platform.system() == "Darwin":
-        r = "java.awt.headless"
-        if not any(filter(r.find, _java_options)):  # type: ignore
-            _java_options = _java_options + ["-Djava.awt.headless=true"]
-
-    if encoding == "utf-8":
-        if not any("file.encoding" in opt for opt in _java_options):
-            _java_options += ["-Dfile.encoding=UTF8"]
-
-    return _java_options
+    pass
 
 
 def _extract_format_for_conversion(output_format: str = "csv") -> str:
-    if output_format.lower() == "csv":
-        return "CSV"
-    elif output_format.lower() == "json":
-        return "JSON"
-    elif output_format.lower() == "tsv":
-        return "TSV"
-    else:
-        raise ValueError(f"Unknown {output_format=}")
+    pass
 
 
 def _extract_from(
@@ -1006,59 +773,7 @@ def _extract_from(
         pandas_options (dict optional):
             pandas options for `pd.DataFrame()`
     """
-
-    data_frames = []
-    if pandas_options is None:
-        pandas_options = {}
-
-    columns = pandas_options.pop("columns", None)
-    columns, header_line_number = _convert_pandas_csv_options(pandas_options, columns)
-
-    for table in raw_json:
-        if len(table["data"]) == 0:
-            continue
-
-        list_data = [
-            [np.nan if not e["text"] else e["text"] for e in row]
-            for row in table["data"]
-        ]
-        _columns = columns
-
-        if isinstance(header_line_number, int) and not columns:
-            _columns = list_data.pop(header_line_number)
-            _unname_idx = 0
-            for idx, col in enumerate(_columns):
-                if col is np.nan:
-                    _columns[idx] = f"Unnamed: {_unname_idx}"
-                    _unname_idx += 1
-
-            counts: Dict[str, int] = defaultdict(int)
-
-            # Avoid duplicate column name adding ".\d" as a suffix
-            for idx, col in enumerate(_columns):
-                cur_count = counts[col]
-
-                while cur_count > 0:
-                    counts[col] = cur_count + 1
-                    col = f"{col}.{cur_count}"
-                    cur_count = counts[col]
-
-                _columns[idx] = col
-                counts[col] = cur_count + 1
-
-        df = pd.DataFrame(data=list_data, columns=_columns, **pandas_options)
-
-        if not pandas_options.get("dtype"):
-            for c in df.columns:
-                try:
-                    df[c] = pd.to_numeric(df[c], errors="raise")
-                except (ValueError, TypeError):
-                    # Same logic as errors='ignore' in pd.to_numeric
-                    # https://github.com/pandas-dev/pandas/pull/57361/files#diff-08fed2587c15d0370931a8b02252eb1034d2c0a650df56760974440a5433a6e0L240-L243
-                    pass
-        data_frames.append(df)
-
-    return data_frames
+    pass
 
 
 def _convert_pandas_csv_options(
@@ -1072,14 +787,4 @@ def _convert_pandas_csv_options(
         columns (iterable):
             iterable of column name.
     """
-
-    _columns = pandas_options.pop("names", columns)
-    header = pandas_options.pop("header", "infer")
-    pandas_options.pop("encoding", None)
-
-    if header == "infer":
-        header_line_number = 0 if not bool(_columns) else None
-    else:
-        header_line_number = header
-
-    return _columns, header_line_number
+    pass
